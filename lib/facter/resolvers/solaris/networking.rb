@@ -9,7 +9,6 @@ module Facter
       class Networking < BaseResolver
         @log = Facter::Log.new(self)
         @fact_list ||= {}
-        @interfaces = {}
 
         class << self
           private
@@ -20,18 +19,19 @@ module Facter
 
           def read_facts(fact_name)
             lifreqs = load_interfaces
-            @interfaces = {}
+            interfaces = {}
 
             lifreqs.each do |lifreq|
-              @interfaces[lifreq.name] ||= {}
+              interface_data = {}
+              interface_data[:mac] = add_mac(lifreq)
+              interface_data.merge!(add_bindings(lifreq))
+              interface_data[:mtu] = add_mtu(lifreq)
+              interface_data[:dhcp] = add_dhcp(lifreq.name)
 
-              add_mac(lifreq)
-              add_bindings(lifreq)
-              add_mtu(lifreq)
-              add_dhcp(lifreq.name)
+              interfaces[lifreq.name] = interface_data
             end
 
-            @fact_list = { interfaces: @interfaces } unless @interfaces.empty?
+            @fact_list = { interfaces: interfaces } unless interfaces.empty?
             primary_interface
 
             ::Resolvers::Utils::Networking.expand_main_bindings(@fact_list)
@@ -47,7 +47,7 @@ module Facter
             @log.debug("Error! #{::FFI::LastError.error}") if ioctl == -1
 
             mac = arp.sa_data_to_mac
-            @interfaces[lifreq.name][:mac] ||= mac if mac.count('0') < 12
+            mac.count('0') < 12 ? mac : nil
           end
 
           def add_bindings(lifreq)
@@ -57,8 +57,7 @@ module Facter
             bindings = ::Resolvers::Utils::Networking.build_binding(ip, netmask_length)
 
             bindings_key = BINDINGS_KEY[lifreq.ss_family]
-            @interfaces[lifreq.name][bindings_key] ||= []
-            @interfaces[lifreq.name][bindings_key] << bindings
+            { bindings_key => bindings }
           end
 
           def add_mtu(lifreq)
@@ -66,7 +65,7 @@ module Facter
 
             @log.debug("Error! #{::FFI::LastError.error}") if ioctl == -1
 
-            @interfaces[lifreq.name][:mtu] ||= lifreq[:lifr_lifru][:lifru_metric]
+            lifreq[:lifr_lifru][:lifru_metric]
           end
 
           def load_netmask(lifreq)
@@ -138,7 +137,7 @@ module Facter
             dhcpinfo_command = Facter::Core::Execution.which('dhcpinfo') || '/sbin/dhcpinfo'
             result = Facter::Core::Execution.execute("#{dhcpinfo_command} -i #{interface_name} ServerID", logger: log)
 
-            @interfaces[interface_name][:dhcp] = result.chomp
+            result.chomp
           end
         end
       end

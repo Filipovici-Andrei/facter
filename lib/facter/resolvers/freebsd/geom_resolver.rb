@@ -17,16 +17,16 @@ module Facter
             require_relative 'ffi/ffi_helper'
             require 'rexml/document'
 
-            read_disks
-            read_partitions
+            read_disks(geom_topology)
+            read_partitions(geom_topology)
 
             @fact_list[fact_name]
           end
 
-          def read_disks
+          def read_disks(geom_topology)
             @fact_list[:disks] = {}
 
-            each_geom_class_provider('DISK') do |provider|
+            each_geom_class_provider('DISK', geom_topology) do |provider|
               name = provider.get_text('./name').value
 
               @fact_list[:disks][name] = %i[read_model read_serial_number read_size].map do |x|
@@ -35,10 +35,10 @@ module Facter
             end
           end
 
-          def read_partitions
+          def read_partitions(geom_topology)
             @fact_list[:partitions] = {}
 
-            each_geom_class_provider('PART') do |provider|
+            each_geom_class_provider('PART', geom_topology) do |provider|
               name = provider.get_text('./name').value
 
               @fact_list[:partitions][name] = %i[read_partlabel read_partuuid read_size].map do |x|
@@ -47,7 +47,7 @@ module Facter
             end
           end
 
-          def each_geom_class_provider(geom_class_name, &block)
+          def each_geom_class_provider(geom_class_name, geom_topology, &block)
             REXML::XPath.each(geom_topology, "/mesh/class[name/text() = '#{geom_class_name}']/geom/provider", &block)
           end
 
@@ -95,7 +95,7 @@ module Facter
           end
 
           def geom_topology
-            @geom_topology ||= REXML::Document.new(geom_confxml)
+            REXML::Document.new(geom_confxml)
           end
 
           def geom_confxml

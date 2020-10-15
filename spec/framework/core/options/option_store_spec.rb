@@ -14,30 +14,34 @@ describe Facter::OptionStore do
   describe '#all' do
     it 'returns default values' do
       expect(option_store.all).to eq(
-        block: true,
-        block_list: {},
-        blocked_facts: [],
-        cli: nil,
-        custom_dir: [],
-        config_file_custom_dir: [],
-        custom_facts: true,
         debug: false,
-        external_dir: [],
+        verbose: false,
+        log_level: :warn,
+        show_legacy: true,
+        custom_facts: true,
+        blocked_facts: [],
+        ruby: true,
+        external_facts: true,
+        config: nil,
+        user_query: [],
+        strict: false,
+        json: false,
+        cache: true,
+        yaml: false,
+        puppet: false,
+        ttls: [],
+        block: true,
+        cli: nil,
+        config_file_custom_dir: [],
         config_file_external_dir: [],
         default_external_dir: [],
-        external_facts: true,
         fact_groups: {},
-        log_level: :warn,
-        ruby: true,
-        show_legacy: true,
-        user_query: [],
-        verbose: false,
-        config: nil,
-        cache: true,
+        block_list: [],
         color: true,
         trace: false,
         timing: false,
-        ttls: []
+        external_dir: [],
+        custom_dir: []
       )
     end
   end
@@ -255,7 +259,13 @@ describe Facter::OptionStore do
   end
 
   describe '#debug' do
+    before do
+      allow(Facter::Log).to receive(:level=).with(level)
+    end
+
     context 'when true' do
+      let(:level) { :debug }
+
       it 'sets debug to true and log_level to :debug' do
         expect do
           option_store.debug = true
@@ -265,6 +275,8 @@ describe Facter::OptionStore do
     end
 
     context 'when false' do
+      let(:level) { :warn }
+
       it 'sets log_level to default (:warn)' do
         option_store.instance_variable_set(:@log_level, :info)
 
@@ -277,7 +289,13 @@ describe Facter::OptionStore do
   end
 
   describe '#verbose=' do
+    before do
+      allow(Facter::Log).to receive(:level=).with(level)
+    end
+
     context 'when true' do
+      let(:level) { :info }
+
       it 'sets log_level to :info' do
         expect do
           option_store.verbose = true
@@ -287,6 +305,8 @@ describe Facter::OptionStore do
     end
 
     context 'when false' do
+      let(:level) { :warn }
+
       it 'sets log_level to default (:warn)' do
         option_store.instance_variable_set(:@log_level, :debug)
 
@@ -379,6 +399,10 @@ describe Facter::OptionStore do
   end
 
   describe '#reset' do
+    before do
+      allow(Facter::Log).to receive(:level=).with(:debug)
+    end
+
     it 'resets to default' do
       default = option_store.all
 

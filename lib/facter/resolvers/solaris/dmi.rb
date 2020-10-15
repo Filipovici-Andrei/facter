@@ -37,8 +37,10 @@ module Facter
 
             output = exec_smbios(param[0])
             facts = param[1]
-            facts.each do |name, regx|
-              @fact_list[name] = output.match(/#{regx}/)&.captures&.first
+            if output
+              facts.each do |name, regx|
+                @fact_list[name] = output.match(/#{regx}/)&.captures&.first
+              end
             end
 
             @fact_list[fact_name]
